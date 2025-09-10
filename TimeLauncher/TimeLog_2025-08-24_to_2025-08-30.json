@@ -1,0 +1,24 @@
+[
+  {
+    "ProjectName": "Port of LA",
+    "ProjectNumber": "10092200080",
+    "TaskName": "40% Design",
+    "TaskNumber": "40% Design",
+    "Notes": "",
+    "IsEdited": true,
+    "ClockIn": "2025-08-25T11:40:57.8144638-07:00",
+    "ClockOut": "2025-08-25T15:40:57.8144638-07:00",
+    "Duration": "04:00:00"
+  },
+  {
+    "ProjectName": "Garrison Creek",
+    "ProjectNumber": "",
+    "TaskName": null,
+    "TaskNumber": null,
+    "Notes": "",
+    "IsEdited": false,
+    "ClockIn": "2025-08-29T08:52:10.4510189-07:00",
+    "ClockOut": "2025-08-29T14:20:58.569495-07:00",
+    "Duration": "05:28:48.1184761"
+  }
+]

@@ -1,0 +1,112 @@
+[
+  {
+    "ProjectName": "2200162 RLREC SR162 100% revisions",
+    "ProjectNumber": "",
+    "TaskName": null,
+    "TaskNumber": null,
+    "Notes": null,
+    "IsEdited": false,
+    "ClockIn": "2025-08-05T11:21:07.0306645-07:00",
+    "ClockOut": "2025-08-05T13:09:17.9412583-07:00",
+    "Duration": "01:48:10.9105938"
+  },
+  {
+    "ProjectName": "2200162 RLREC SR162 100% revisions",
+    "ProjectNumber": "",
+    "TaskName": null,
+    "TaskNumber": null,
+    "Notes": null,
+    "IsEdited": false,
+    "ClockIn": "2025-08-05T13:09:45.5485159-07:00",
+    "ClockOut": "2025-08-05T13:09:47.8209381-07:00",
+    "Duration": "00:00:02.2724222"
+  },
+  {
+    "ProjectName": "Martime Center",
+    "ProjectNumber": "",
+    "TaskName": "Street Memo",
+    "TaskNumber": "a",
+    "Notes": null,
+    "IsEdited": false,
+    "ClockIn": "2025-08-05T13:09:53.5989024-07:00",
+    "ClockOut": "2025-08-05T13:32:04.1930432-07:00",
+    "Duration": "00:22:10.5941408"
+  },
+  {
+    "ProjectName": "2200162 RLREC SR162 100% revisions",
+    "ProjectNumber": "",
+    "TaskName": null,
+    "TaskNumber": null,
+    "Notes": null,
+    "IsEdited": false,
+    "ClockIn": "2025-08-05T15:30:14.8317249-07:00",
+    "ClockOut": "2025-08-05T16:30:52.803405-07:00",
+    "Duration": "01:00:37.9716801"
+  },
+  {
+    "ProjectName": "2200162 RLREC SR162 100% revisions",
+    "ProjectNumber": "",
+    "TaskName": null,
+    "TaskNumber": null,
+    "Notes": "Testing Notes",
+    "IsEdited": false,
+    "ClockIn": "2025-08-05T16:31:21.041646-07:00",
+    "ClockOut": "2025-08-05T16:41:41.723277-07:00",
+    "Duration": "00:10:20.6816310"
+  },
+  {
+    "ProjectName": "2200162 RLREC SR162 100% revisions",
+    "ProjectNumber": "",
+    "TaskName": null,
+    "TaskNumber": null,
+    "Notes": "",
+    "IsEdited": true,
+    "ClockIn": "2025-08-06T10:22:25.9584722-07:00",
+    "ClockOut": "2025-08-06T12:58:25.9584722-07:00",
+    "Duration": "02:36:00"
+  },
+  {
+    "ProjectName": "2200162 RLREC SR162 100% revisions",
+    "ProjectNumber": "",
+    "TaskName": null,
+    "TaskNumber": null,
+    "Notes": "",
+    "IsEdited": true,
+    "ClockIn": "2025-08-06T12:56:51.0264013-07:00",
+    "ClockOut": "2025-08-06T14:56:51.0264013-07:00",
+    "Duration": "02:00:00"
+  },
+  {
+    "ProjectName": "IRM Track Grading",
+    "ProjectNumber": "10092500068",
+    "TaskName": null,
+    "TaskNumber": null,
+    "Notes": "Checking reasonableness of estimate received from American Track",
+    "IsEdited": false,
+    "ClockIn": "2025-08-06T15:34:04.4778079-07:00",
+    "ClockOut": "2025-08-06T16:06:51.9742393-07:00",
+    "Duration": "00:32:47.4964314"
+  },
+  {
+    "ProjectName": "2200162 RLREC SR162 100% revisions",
+    "ProjectNumber": "",
+    "TaskName": null,
+    "TaskNumber": null,
+    "Notes": "",
+    "IsEdited": true,
+    "ClockIn": "2025-08-07T11:37:09.1219487-07:00",
+    "ClockOut": "2025-08-07T12:37:09.1219487-07:00",
+    "Duration": "01:00:00"
+  },
+  {
+    "ProjectName": "ADAK",
+    "ProjectNumber": "",
+    "TaskName": null,
+    "TaskNumber": null,
+    "Notes": "",
+    "IsEdited": true,
+    "ClockIn": "2025-08-07T15:32:21.3671635-07:00",
+    "ClockOut": "2025-08-07T16:32:21.3671635-07:00",
+    "Duration": "01:00:00"
+  }
+]
