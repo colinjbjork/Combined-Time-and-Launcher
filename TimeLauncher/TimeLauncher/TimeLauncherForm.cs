@@ -30,6 +30,7 @@ namespace TimeLauncher
         private TaskItem currentTask;
         private DateTime? clockInTime;
         private Label lblTrackingInfo; // 🆕
+        private ClockedInOverlay clockedInOverlay; // 🆕 always-on-top reminder
 
 
         public TimeLauncherForm()
@@ -281,6 +282,12 @@ namespace TimeLauncher
             });
             UpdateTrackingLabel(); // 🆕
 
+            if (clockedInOverlay == null || clockedInOverlay.IsDisposed)
+                clockedInOverlay = new ClockedInOverlay(currentProject.ProjectName);
+            else
+                clockedInOverlay.UpdateProject(currentProject.ProjectName);
+            clockedInOverlay.Show();
+
         }
 
         private void BtnTimeOut_Click(object sender, EventArgs e)
@@ -330,6 +337,9 @@ namespace TimeLauncher
             lblTimer.Text = "00:00:00";
             clockInTime = null;
             SessionManager.ClearSession();
+
+            clockedInOverlay?.Close();
+            clockedInOverlay = null;
 
             if (manual)
                 MessageBox.Show($"Clocked out. Duration: {log.Duration.TotalMinutes:F1} minutes");
@@ -427,6 +437,9 @@ namespace TimeLauncher
             timerElapsed.Start();
             hourlyPromptTimer.Start();
             UpdateTrackingLabel(); // 🆕
+
+            clockedInOverlay = new ClockedInOverlay(currentProject.ProjectName);
+            clockedInOverlay.Show();
 
         }
         private void UpdateTrackingLabel() // 🆕
