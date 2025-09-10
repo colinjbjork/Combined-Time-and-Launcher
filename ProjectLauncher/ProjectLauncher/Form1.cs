@@ -114,7 +114,8 @@ namespace ProjectLauncher
             }
 
             var viewForm = new ViewProjectsForm(selectedProject);
-            viewForm.ShowDialog();
+            // Open as modeless so the main window can still be moved while editing
+            viewForm.Show();
         }
 
         private void ButtonDeleteProject_Click(object sender, EventArgs e)
