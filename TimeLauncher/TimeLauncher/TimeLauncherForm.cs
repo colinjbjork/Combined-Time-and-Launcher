@@ -303,11 +303,11 @@ namespace TimeLauncher
                 ClockOut(manual: false);
         }
 
-        private void ClockOut(bool manual)
+        private void ClockOut(bool manual, DateTime? overrideClockOutTime = null)
         {
             if (clockInTime == null) return;
 
-            var clockOutTime = DateTime.Now;
+            var clockOutTime = overrideClockOutTime ?? DateTime.Now;
 
             string notes = "";
             if (manual)
@@ -369,10 +369,11 @@ namespace TimeLauncher
         {
             if (!stillWorking && clockInTime != null)
             {
+                var autoClockOutTime = DateTime.Now;
                 Invoke(new Action(() =>
                 {
+                    ClockOut(manual: false, overrideClockOutTime: autoClockOutTime);
                     MessageBox.Show("No response detected. Automatically clocking out.");
-                    ClockOut(manual: false);
                 }));
             }
         }
