@@ -5,6 +5,7 @@ using System.Linq;
 using System.Windows.Forms;
 using TimeLauncher.Models;
 using TimeLauncher.Services;
+using Microsoft.Win32;
 
 
 
@@ -31,6 +32,7 @@ namespace TimeLauncher
         private DateTime? clockInTime;
         private Label lblTrackingInfo; // 🆕
         private ClockedInOverlay clockedInOverlay; // 🆕 always-on-top reminder
+        private bool clockedOutDueToSuspend;
 
 
         public TimeLauncherForm()
@@ -39,6 +41,7 @@ namespace TimeLauncher
             activeProjects = ProjectService.LoadProjects(); // <- Load persisted list
             RefreshProjectList(); // Populate UI
             LoadSessionIfAvailable();
+            SystemEvents.PowerModeChanged += SystemEvents_PowerModeChanged;
         }
 
         private void InitializeComponents()
@@ -378,6 +381,26 @@ namespace TimeLauncher
             }
         }
 
+        private void SystemEvents_PowerModeChanged(object sender, PowerModeChangedEventArgs e)
+        {
+            if (e.Mode == PowerModes.Suspend)
+            {
+                if (clockInTime != null)
+                {
+                    ClockOut(manual: false, overrideClockOutTime: DateTime.Now);
+                    clockedOutDueToSuspend = true;
+                }
+            }
+            else if (e.Mode == PowerModes.Resume)
+            {
+                if (clockedOutDueToSuspend)
+                {
+                    MessageBox.Show("System resumed. You were clocked out. Please clock in again.");
+                    clockedOutDueToSuspend = false;
+                }
+            }
+        }
+
         private void BtnDeleteProject_Click(object sender, EventArgs e)
         {
             if (currentProject == null)
@@ -398,7 +421,9 @@ namespace TimeLauncher
             {
                 this.Hide();
                 e.Cancel = true;
+                return;
             }
+            SystemEvents.PowerModeChanged -= SystemEvents_PowerModeChanged;
         }
 
         private void TimeLauncherForm_Resize(object sender, EventArgs e)
