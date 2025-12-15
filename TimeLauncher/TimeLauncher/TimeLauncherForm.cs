@@ -299,32 +299,7 @@ namespace TimeLauncher
 
         private void BtnTimeIn_Click(object sender, EventArgs e)
         {
-            if (currentProject == null)
-            {
-                var overhead = GetOverheadProject();
-                ApplyProjectSelection(overhead, true);
-            }
-
-            if (currentProject == null)
-            {
-                MessageBox.Show("Please select a project.");
-                return;
-            }
-
-            if (clockInTime != null)
-            {
-                MessageBox.Show("Already clocked in.");
-                return;
-            }
-
-            clockInTime = DateTime.Now;
-            timerElapsed.Start();
-            hourlyPromptTimer.Start();
-
-            PersistSession();
-            UpdateTrackingLabel(); // 🆕
-
-            clockedInOverlay.UpdateProject(currentProject?.ProjectName ?? OverheadProjectName, true);
+            StartClockInForCurrentProject(showAlreadyClockedInMessage: true);
 
         }
 
@@ -588,7 +563,20 @@ namespace TimeLauncher
             if (project == null)
                 return;
 
+            bool switchingWhileClockedIn = clockInTime != null && currentProject != null &&
+                                           !string.Equals(currentProject.ProjectName, project.ProjectName, StringComparison.OrdinalIgnoreCase);
+
+            if (switchingWhileClockedIn)
+            {
+                ClockOut(manual: false);
+            }
+
             ApplyProjectSelection(project, true);
+
+            if (switchingWhileClockedIn)
+            {
+                StartClockInForCurrentProject(showAlreadyClockedInMessage: false);
+            }
             clockedInOverlay.CollapseProjects();
         }
 
@@ -613,6 +601,38 @@ namespace TimeLauncher
                 TaskNumber = currentTask?.TaskNumber,
                 ClockInTime = clockInTime.Value
             });
+        }
+
+        private void StartClockInForCurrentProject(bool showAlreadyClockedInMessage)
+        {
+            if (currentProject == null)
+            {
+                var overhead = GetOverheadProject();
+                ApplyProjectSelection(overhead, true);
+            }
+
+            if (currentProject == null)
+            {
+                if (showAlreadyClockedInMessage)
+                    MessageBox.Show("Please select a project.");
+                return;
+            }
+
+            if (clockInTime != null)
+            {
+                if (showAlreadyClockedInMessage)
+                    MessageBox.Show("Already clocked in.");
+                return;
+            }
+
+            clockInTime = DateTime.Now;
+            timerElapsed.Start();
+            hourlyPromptTimer.Start();
+
+            PersistSession();
+            UpdateTrackingLabel(); // 🆕
+
+            clockedInOverlay.UpdateProject(currentProject?.ProjectName ?? OverheadProjectName, true);
         }
 
     }
