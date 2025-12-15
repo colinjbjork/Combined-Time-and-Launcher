@@ -31,6 +31,8 @@ namespace TimeLauncher
         private List<TimeProject> activeProjects;
         private TimeProject currentProject;
         private TaskItem currentTask;
+        private TimeProject clockedInProject;
+        private TaskItem clockedInTask;
         private DateTime? clockInTime;
         private Label lblTrackingInfo; // 🆕
         private ClockedInOverlay clockedInOverlay; // 🆕 always-on-top reminder
@@ -321,6 +323,8 @@ namespace TimeLauncher
             if (clockInTime == null) return;
 
             var clockOutTime = overrideClockOutTime ?? DateTime.Now;
+            var trackingProject = GetTrackingProject();
+            var trackingTask = GetTrackingTask();
 
             string notes = "";
             if (manual)
@@ -334,10 +338,10 @@ namespace TimeLauncher
 
             var log = new TimeLogEntry
             {
-                ProjectName = currentProject?.ProjectName,
-                ProjectNumber = currentProject?.ProjectNumber,
-                TaskName = currentTask?.TaskName,
-                TaskNumber = currentTask?.TaskNumber,
+                ProjectName = trackingProject?.ProjectName,
+                ProjectNumber = trackingProject?.ProjectNumber,
+                TaskName = trackingTask?.TaskName,
+                TaskNumber = trackingTask?.TaskNumber,
                 ClockIn = clockInTime.Value,
                 ClockOut = clockOutTime,
                 Notes = notes // ✅ store notes
@@ -349,9 +353,12 @@ namespace TimeLauncher
             hourlyPromptTimer.Stop();
             lblTimer.Text = "00:00:00";
             clockInTime = null;
+            clockedInProject = null;
+            clockedInTask = null;
             SessionManager.ClearSession();
 
-            clockedInOverlay?.UpdateProject(currentProject?.ProjectName ?? OverheadProjectName, false);
+            UpdateTrackingLabel();
+            UpdateOverlay();
             clockedInOverlay?.CollapseProjects();
 
             if (manual)
@@ -370,10 +377,12 @@ namespace TimeLauncher
 
         private void HourlyPromptTimer_Tick(object sender, EventArgs e)
         {
-            if (currentProject == null || clockInTime == null)
+            var trackingProject = GetTrackingProject();
+
+            if (trackingProject == null || clockInTime == null)
                 return;
 
-            var popup = new ReminderForm(currentProject.ProjectName);
+            var popup = new ReminderForm(trackingProject.ProjectName);
             popup.ResponseReceived += HandleReminderResponse;
             popup.Show();
         }
@@ -496,21 +505,27 @@ namespace TimeLauncher
             hourlyPromptTimer.Start();
             UpdateTrackingLabel(); // 🆕
 
-            clockedInOverlay.UpdateProjects(GetOrderedProjects(), currentProject);
-            clockedInOverlay.UpdateProject(currentProject?.ProjectName ?? OverheadProjectName, true);
+            clockedInProject = currentProject;
+            clockedInTask = currentTask;
+
+            clockedInOverlay.UpdateProjects(GetOrderedProjects(), GetTrackingProject());
+            clockedInOverlay.UpdateProject(GetTrackingProject()?.ProjectName ?? OverheadProjectName, true);
 
         }
         private void UpdateTrackingLabel() // 🆕
         {
-            if (currentProject == null || clockInTime == null)
+            var trackingProject = GetTrackingProject();
+            var trackingTask = GetTrackingTask();
+
+            if (trackingProject == null || clockInTime == null)
             {
                 lblTrackingInfo.Text = "";
                 return;
             }
 
-            string text = $"Tracking: {currentProject.ProjectName}";
-            if (!string.IsNullOrWhiteSpace(currentTask?.TaskName))
-                text += $" - {currentTask.TaskName}";
+            string text = $"Tracking: {trackingProject.ProjectName}";
+            if (!string.IsNullOrWhiteSpace(trackingTask?.TaskName))
+                text += $" - {trackingTask.TaskName}";
 
             lblTrackingInfo.Text = text;
         }
@@ -546,8 +561,9 @@ namespace TimeLauncher
             if (clockedInOverlay == null || clockedInOverlay.IsDisposed)
                 return;
 
-            clockedInOverlay.UpdateProjects(GetOrderedProjects(), currentProject);
-            clockedInOverlay.UpdateProject(currentProject?.ProjectName ?? OverheadProjectName, clockInTime != null);
+            var trackingProject = GetTrackingProject();
+            clockedInOverlay.UpdateProjects(GetOrderedProjects(), trackingProject);
+            clockedInOverlay.UpdateProject(trackingProject?.ProjectName ?? OverheadProjectName, clockInTime != null);
         }
 
         private void InitializeOverlay()
@@ -595,10 +611,10 @@ namespace TimeLauncher
         {
             SessionManager.SaveSession(new SessionManager.SessionData
             {
-                ProjectName = currentProject?.ProjectName,
-                ProjectNumber = currentProject?.ProjectNumber,
-                TaskName = currentTask?.TaskName,
-                TaskNumber = currentTask?.TaskNumber,
+                ProjectName = GetTrackingProject()?.ProjectName,
+                ProjectNumber = GetTrackingProject()?.ProjectNumber,
+                TaskName = GetTrackingTask()?.TaskName,
+                TaskNumber = GetTrackingTask()?.TaskNumber,
                 ClockInTime = clockInTime.Value
             });
         }
@@ -626,13 +642,25 @@ namespace TimeLauncher
             }
 
             clockInTime = DateTime.Now;
+            clockedInProject = currentProject;
+            clockedInTask = currentTask;
             timerElapsed.Start();
             hourlyPromptTimer.Start();
 
             PersistSession();
             UpdateTrackingLabel(); // 🆕
 
-            clockedInOverlay.UpdateProject(currentProject?.ProjectName ?? OverheadProjectName, true);
+            UpdateOverlay();
+        }
+
+        private TimeProject GetTrackingProject()
+        {
+            return clockInTime != null ? (clockedInProject ?? currentProject) : currentProject;
+        }
+
+        private TaskItem GetTrackingTask()
+        {
+            return clockInTime != null ? (clockedInTask ?? currentTask) : currentTask;
         }
 
     }
