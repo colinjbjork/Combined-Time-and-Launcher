@@ -13,6 +13,8 @@ namespace TimeLauncher
 {
     public class TimeLauncherForm : Form
     {
+        private const string OverheadProjectName = "overhead";
+
         private ListBox lstProjects;
         private ComboBox cmbTasks;
         private Button btnTimeIn;
@@ -39,7 +41,9 @@ namespace TimeLauncher
         {
             InitializeComponents();
             activeProjects = ProjectService.LoadProjects(); // <- Load persisted list
+            EnsureOverheadProject();
             RefreshProjectList(); // Populate UI
+            InitializeOverlay();
             LoadSessionIfAvailable();
             SystemEvents.PowerModeChanged += SystemEvents_PowerModeChanged;
         }
@@ -80,8 +84,8 @@ namespace TimeLauncher
             cmbTasks = new ComboBox { Location = new Point(240, 20), Size = new Size(300, 30), DropDownStyle = ComboBoxStyle.DropDownList };
             cmbTasks.SelectedIndexChanged += CmbTasks_SelectedIndexChanged;
 
-            btnTimeIn = new Button { Text = "Time In", Location = new Point(240, 70), Size = new Size(90, 30) };
-            btnTimeOut = new Button { Text = "Time Out", Location = new Point(340, 70), Size = new Size(90, 30) };
+            btnTimeIn = new Button { Text = "Clock In", Location = new Point(240, 70), Size = new Size(90, 30) };
+            btnTimeOut = new Button { Text = "Clock Out", Location = new Point(340, 70), Size = new Size(90, 30) };
             btnCreateProject = new Button { Text = "Create Project", Location = new Point(240, 120), Size = new Size(190, 30) };
             Button btnRetrieveProject = new Button
             {
@@ -168,6 +172,7 @@ namespace TimeLauncher
                     selected.IsArchived = false;
                     ProjectService.SaveProjects(activeProjects);
                     RefreshProjectList();
+                    UpdateOverlay();
                     dialog.Close();
                 }
                 else
@@ -213,8 +218,9 @@ namespace TimeLauncher
             {
                 var newProject = createForm.CreatedProject;
                 activeProjects.Add(newProject);
-                ProjectService.SaveProjects(activeProjects); 
+                ProjectService.SaveProjects(activeProjects);
                 RefreshProjectList();
+                UpdateOverlay();
             }
         }
 
@@ -225,6 +231,7 @@ namespace TimeLauncher
         private void LoadProjects()
         {
             activeProjects = ProjectService.LoadProjects();
+            EnsureOverheadProject();
             RefreshProjectList();
         }
 
@@ -232,24 +239,57 @@ namespace TimeLauncher
         private void RefreshProjectList()
         {
             lstProjects.Items.Clear();
-            foreach (var proj in activeProjects.Where(p => !p.IsArchived))
+            foreach (var proj in GetOrderedProjects())
                 lstProjects.Items.Add(proj);
+
+            if (currentProject != null)
+            {
+                lstProjects.SelectedItem = currentProject;
+            }
+
+            UpdateOverlay();
+        }
+
+
+        private IEnumerable<TimeProject> GetOrderedProjects()
+        {
+            return activeProjects
+                .Where(p => !p.IsArchived)
+                .OrderByDescending(IsOverhead)
+                .ThenBy(p => p.ProjectName, StringComparer.OrdinalIgnoreCase);
+        }
+
+        private void EnsureOverheadProject()
+        {
+            var overhead = activeProjects.FirstOrDefault(p => IsOverhead(p));
+            var updated = false;
+            if (overhead == null)
+            {
+                overhead = new TimeProject
+                {
+                    ProjectName = OverheadProjectName,
+                    ProjectNumber = "0000"
+                };
+                activeProjects.Insert(0, overhead);
+                updated = true;
+            }
+
+            if (overhead.IsArchived)
+            {
+                overhead.IsArchived = false;
+                updated = true;
+            }
+
+            if (updated)
+            {
+                ProjectService.SaveProjects(activeProjects);
+            }
         }
 
 
         private void LstProjects_SelectedIndexChanged(object sender, EventArgs e)
         {
-            currentProject = lstProjects.SelectedItem as TimeProject;
-            currentTask = null;
-
-            cmbTasks.Items.Clear();
-            cmbTasks.Items.Add(""); // empty for "no task"
-            if (currentProject?.Tasks != null)
-            {
-                foreach (var task in currentProject.Tasks)
-                    cmbTasks.Items.Add(task);
-            }
-            cmbTasks.SelectedIndex = 0;
+            ApplyProjectSelection(lstProjects.SelectedItem as TimeProject, false);
         }
 
         private void CmbTasks_SelectedIndexChanged(object sender, EventArgs e)
@@ -259,6 +299,12 @@ namespace TimeLauncher
 
         private void BtnTimeIn_Click(object sender, EventArgs e)
         {
+            if (currentProject == null)
+            {
+                var overhead = GetOverheadProject();
+                ApplyProjectSelection(overhead, true);
+            }
+
             if (currentProject == null)
             {
                 MessageBox.Show("Please select a project.");
@@ -275,21 +321,10 @@ namespace TimeLauncher
             timerElapsed.Start();
             hourlyPromptTimer.Start();
 
-            SessionManager.SaveSession(new SessionManager.SessionData
-            {
-                ProjectName = currentProject.ProjectName,
-                ProjectNumber = currentProject.ProjectNumber,
-                TaskName = currentTask?.TaskName,
-                TaskNumber = currentTask?.TaskNumber,
-                ClockInTime = clockInTime.Value
-            });
+            PersistSession();
             UpdateTrackingLabel(); // 🆕
 
-            if (clockedInOverlay == null || clockedInOverlay.IsDisposed)
-                clockedInOverlay = new ClockedInOverlay(currentProject.ProjectName);
-            else
-                clockedInOverlay.UpdateProject(currentProject.ProjectName);
-            clockedInOverlay.Show();
+            clockedInOverlay.UpdateProject(currentProject?.ProjectName ?? OverheadProjectName, true);
 
         }
 
@@ -341,8 +376,8 @@ namespace TimeLauncher
             clockInTime = null;
             SessionManager.ClearSession();
 
-            clockedInOverlay?.Close();
-            clockedInOverlay = null;
+            clockedInOverlay?.UpdateProject(currentProject?.ProjectName ?? OverheadProjectName, false);
+            clockedInOverlay?.CollapseProjects();
 
             if (manual)
                 MessageBox.Show($"Clocked out. Duration: {log.Duration.TotalMinutes:F1} minutes");
@@ -409,9 +444,16 @@ namespace TimeLauncher
                 return;
             }
 
+            if (IsOverhead(currentProject))
+            {
+                MessageBox.Show("The overhead project cannot be deleted.");
+                return;
+            }
+
             currentProject.IsArchived = true;                // ✅ Mark as archived
             ProjectService.SaveProjects(activeProjects);     // ✅ Save updated list
             RefreshProjectList();                            // ✅ Refresh UI
+            UpdateOverlay();
         }
 
 
@@ -446,17 +488,32 @@ namespace TimeLauncher
             var session = SessionManager.LoadSession();
             if (session == null) return;
 
-            currentProject = new TimeProject
+            currentProject = activeProjects
+                .FirstOrDefault(p => string.Equals(p.ProjectName, session.ProjectName, StringComparison.OrdinalIgnoreCase))
+                ?? new TimeProject
+                {
+                    ProjectName = session.ProjectName,
+                    ProjectNumber = session.ProjectNumber
+                };
+
+            var sessionTaskName = session.TaskName;
+            var sessionTaskNumber = session.TaskNumber;
+            var restoredClockInTime = session.ClockInTime;
+
+            ApplyProjectSelection(currentProject, true);
+
+            clockInTime = restoredClockInTime;
+
+            if (!string.IsNullOrWhiteSpace(sessionTaskName) && currentProject?.Tasks != null)
             {
-                ProjectName = session.ProjectName,
-                ProjectNumber = session.ProjectNumber
-            };
-            currentTask = new TaskItem
-            {
-                TaskName = session.TaskName,
-                TaskNumber = session.TaskNumber
-            };
-            clockInTime = session.ClockInTime;
+                var matchingTask = currentProject.Tasks.FirstOrDefault(t => t.TaskName == sessionTaskName) ??
+                                   currentProject.Tasks.FirstOrDefault(t => t.TaskNumber == sessionTaskNumber);
+                if (matchingTask != null)
+                {
+                    currentTask = matchingTask;
+                    cmbTasks.SelectedItem = matchingTask;
+                }
+            }
 
             lblTimer.Text = (DateTime.Now - clockInTime.Value).ToString(@"hh\:mm\:ss");
 
@@ -464,8 +521,8 @@ namespace TimeLauncher
             hourlyPromptTimer.Start();
             UpdateTrackingLabel(); // 🆕
 
-            clockedInOverlay = new ClockedInOverlay(currentProject.ProjectName);
-            clockedInOverlay.Show();
+            clockedInOverlay.UpdateProjects(GetOrderedProjects(), currentProject);
+            clockedInOverlay.UpdateProject(currentProject?.ProjectName ?? OverheadProjectName, true);
 
         }
         private void UpdateTrackingLabel() // 🆕
@@ -481,6 +538,81 @@ namespace TimeLauncher
                 text += $" - {currentTask.TaskName}";
 
             lblTrackingInfo.Text = text;
+        }
+
+        private void ApplyProjectSelection(TimeProject project, bool updateListSelection)
+        {
+            currentProject = project;
+            currentTask = null;
+
+            if (updateListSelection && project != null)
+                lstProjects.SelectedItem = project;
+
+            cmbTasks.Items.Clear();
+            cmbTasks.Items.Add("");
+            if (currentProject?.Tasks != null)
+            {
+                foreach (var task in currentProject.Tasks)
+                    cmbTasks.Items.Add(task);
+            }
+            cmbTasks.SelectedIndex = 0;
+
+            if (clockInTime != null)
+            {
+                PersistSession();
+            }
+
+            UpdateTrackingLabel();
+            UpdateOverlay();
+        }
+
+        private void UpdateOverlay()
+        {
+            if (clockedInOverlay == null || clockedInOverlay.IsDisposed)
+                return;
+
+            clockedInOverlay.UpdateProjects(GetOrderedProjects(), currentProject);
+            clockedInOverlay.UpdateProject(currentProject?.ProjectName ?? OverheadProjectName, clockInTime != null);
+        }
+
+        private void InitializeOverlay()
+        {
+            clockedInOverlay = new ClockedInOverlay();
+            clockedInOverlay.ProjectSelected += ClockedInOverlay_ProjectSelected;
+            UpdateOverlay();
+            clockedInOverlay.Show();
+        }
+
+        private void ClockedInOverlay_ProjectSelected(TimeProject project)
+        {
+            if (project == null)
+                return;
+
+            ApplyProjectSelection(project, true);
+            clockedInOverlay.CollapseProjects();
+        }
+
+        private TimeProject GetOverheadProject()
+        {
+            return activeProjects.FirstOrDefault(IsOverhead);
+        }
+
+        private bool IsOverhead(TimeProject project)
+        {
+            return project != null && project.ProjectName != null &&
+                   project.ProjectName.Equals(OverheadProjectName, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private void PersistSession()
+        {
+            SessionManager.SaveSession(new SessionManager.SessionData
+            {
+                ProjectName = currentProject?.ProjectName,
+                ProjectNumber = currentProject?.ProjectNumber,
+                TaskName = currentTask?.TaskName,
+                TaskNumber = currentTask?.TaskNumber,
+                ClockInTime = clockInTime.Value
+            });
         }
 
     }
