@@ -607,6 +607,12 @@ namespace TimeLauncher
                    project.ProjectName.Equals(OverheadProjectName, StringComparison.OrdinalIgnoreCase);
         }
 
+        private bool IsSameProject(TimeProject first, TimeProject second)
+        {
+            return first != null && second != null &&
+                   string.Equals(first.ProjectName, second.ProjectName, StringComparison.OrdinalIgnoreCase);
+        }
+
         private void PersistSession()
         {
             SessionManager.SaveSession(new SessionManager.SessionData
@@ -634,11 +640,21 @@ namespace TimeLauncher
                 return;
             }
 
-            if (clockInTime != null)
+            var trackingProject = GetTrackingProject();
+            bool isAlreadyClockedIntoSelectedProject = clockInTime != null &&
+                                                      IsSameProject(trackingProject, currentProject);
+            bool switchingProjects = clockInTime != null && !isAlreadyClockedIntoSelectedProject;
+
+            if (isAlreadyClockedIntoSelectedProject)
             {
                 if (showAlreadyClockedInMessage)
                     MessageBox.Show("Already clocked in.");
                 return;
+            }
+
+            if (switchingProjects)
+            {
+                ClockOut(manual: false);
             }
 
             clockInTime = DateTime.Now;
